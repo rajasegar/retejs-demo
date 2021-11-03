@@ -108,16 +108,20 @@ class FetchComponent extends Rete.Component {
         return node.addControl(new UrlControl(this.editor, 'json')).addOutput(out1);
     }
 
-    async worker(node, inputs, outputs) {
-      if(node.data.json) {
+  async worker(node, inputs, outputs) {
+    if(node.data.json) {
+      // _.debounce(async () => {
+
+        const response = await fetch(`https://api.github.com/users/${node.data.json}`);
+        const data = await response.json();
+        outputs['json'] = data;
         
-  const response = await fetch(`https://api.github.com/users/${node.data.json}`);
-  const data = await response.json();
-      outputs['json'] = { data };
-      } else {
-        outputs['json'] = { data: {}}
-      }
+      // }, 2000)
+      
+    } else {
+      outputs['json'] = {};
     }
+  }
 }
 class AddComponent extends Rete.Component {
     constructor(){
@@ -189,6 +193,26 @@ class ConsoleLogComponent extends Rete.Component {
 
     return node
       .addInput(inp1)
+    
+  }
+
+  worker(node, inputs, outputs) {
+
+    const str = inputs['str'].length ? inputs['str'][0] : node.data.str;
+    console.log(str)
+    
+  }
+}
+
+class AssocComponent extends Rete.Component {
+  constructor() {
+    super("console.log")
+  }
+
+  builder(node) {
+    const out1 = new Rete.Input('str', "String", anyTypeSocket)
+
+    return node.addControl(new UrlControl(this.editor, 'json')).addOutput(out1);
     
   }
 
