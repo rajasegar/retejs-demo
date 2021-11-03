@@ -222,7 +222,7 @@ class AssocComponent extends Rete.Component {
 
   worker(node, inputs, outputs) {
     const _obj = inputs['json'][0];
-    outputs['str'] = _.at(_obj, [node.data.path]);
+    outputs['str'] = _.get(_obj, node.data.path);
   }
 }
 
