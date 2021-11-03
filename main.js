@@ -2,7 +2,7 @@ var numSocket = new Rete.Socket('Number value');
 var jsonSocket = new Rete.Socket('JSON value');
 const anyTypeSocket = new Rete.Socket('Any type');
 
-jsonSocket.combineWith(anyTypeSocket)
+jsonSocket.combineWith(anyTypeSocket);
 
 numSocket.combineWith(anyTypeSocket);
 
@@ -12,7 +12,7 @@ var VueNumControl = {
   data() {
     return {
       value: 0,
-    }
+    };
   },
   methods: {
     change(e){
@@ -21,7 +21,7 @@ var VueNumControl = {
     },
     update() {
       if (this.ikey)
-        this.putData(this.ikey, this.value)
+        this.putData(this.ikey, this.value);
       this.emitter.trigger('process');
     }
   },
@@ -36,7 +36,7 @@ var VueUrlControl = {
   data() {
     return {
       value: 0,
-    }
+    };
   },
   methods: {
     change(e){
@@ -45,7 +45,7 @@ var VueUrlControl = {
     },
     update() {
       if (this.ikey)
-        this.putData(this.ikey, this.value)
+        this.putData(this.ikey, this.value);
       this.emitter.trigger('process');
     }
   },
@@ -133,8 +133,8 @@ class AddComponent extends Rete.Component {
         var inp2 = new Rete.Input('num2', "Number2", numSocket);
         var out = new Rete.Output('num', "Number", numSocket);
 
-        inp1.addControl(new NumControl(this.editor, 'num'))
-        inp2.addControl(new NumControl(this.editor, 'num2'))
+      inp1.addControl(new NumControl(this.editor, 'num'));
+      inp2.addControl(new NumControl(this.editor, 'num2'));
 
         return node
             .addInput(inp1)
@@ -163,8 +163,8 @@ class MultiplyComponent extends Rete.Component {
         var inp2 = new Rete.Input('num2', "Number2", numSocket);
         var out = new Rete.Output('num', "Number", numSocket);
 
-        inp1.addControl(new NumControl(this.editor, 'num'))
-        inp2.addControl(new NumControl(this.editor, 'num2'))
+      inp1.addControl(new NumControl(this.editor, 'num'));
+      inp2.addControl(new NumControl(this.editor, 'num2'));
 
         return node
             .addInput(inp1)
@@ -185,49 +185,83 @@ class MultiplyComponent extends Rete.Component {
 
 class ConsoleLogComponent extends Rete.Component {
   constructor() {
-    super("console.log")
+    super("console.log");
   }
 
   builder(node) {
-    const inp1 = new Rete.Input('str', "String", anyTypeSocket)
+    const inp1 = new Rete.Input('str', "Any", anyTypeSocket);
 
     return node
-      .addInput(inp1)
+      .addInput(inp1);
     
   }
 
   worker(node, inputs, outputs) {
 
     const str = inputs['str'].length ? inputs['str'][0] : node.data.str;
-    console.log(str)
+    console.log(str);
     
   }
 }
 
 class AssocComponent extends Rete.Component {
   constructor() {
-    super("console.log")
+    super("assoc");
   }
 
   builder(node) {
-    const out1 = new Rete.Input('str', "String", anyTypeSocket)
+    const inp1 = new Rete.Input('json', 'JSON', jsonSocket);
+    const out1 = new Rete.Output('str', "Any", anyTypeSocket);
 
-    return node.addControl(new UrlControl(this.editor, 'json')).addOutput(out1);
+    return node
+      .addControl(new UrlControl(this.editor, 'path'))
+      .addInput(inp1)
+      .addOutput(out1);
     
   }
 
   worker(node, inputs, outputs) {
+    const _obj = inputs['json'][0];
+    outputs['str'] = _.at(_obj, [node.data.path]);
+  }
+}
 
-    const str = inputs['str'].length ? inputs['str'][0] : node.data.str;
-    console.log(str)
-    
+class JSONComponent extends Rete.Component {
+  constructor() {
+    super('json');
+  }
+
+  builder(node) {
+    const out1 = new Rete.Output('json', 'JSON', jsonSocket);
+    return node.addOutput(out1);
+  }
+
+  worker(node, inputs, outputs) {
+    outputs['json'] = {
+      name: 'Rajasegar',
+      age: 20,
+      admin: false,
+      address: {
+        street: 'Kaveri nagar',
+        state: 'TamilNadu',
+        district: 'Chennai'
+      }
+    };
   }
 }
 
 
 (async () => {
     var container = document.querySelector('#rete');
-  var components = [new NumComponent(), new AddComponent(), new MultiplyComponent(), new ConsoleLogComponent(), new FetchComponent()];
+  var components = [
+    new NumComponent(),
+    new AddComponent(),
+    new MultiplyComponent(),
+    new ConsoleLogComponent(),
+    new FetchComponent(),
+    new AssocComponent(),
+    new JSONComponent()
+  ];
     
     var editor = new Rete.NodeEditor('demo@0.1.0', container);
     editor.use(ConnectionPlugin.default);
