@@ -1,4 +1,10 @@
 var numSocket = new Rete.Socket('Number value');
+var jsonSocket = new Rete.Socket('JSON value');
+const anyTypeSocket = new Rete.Socket('Any type');
+
+jsonSocket.combineWith(anyTypeSocket)
+
+numSocket.combineWith(anyTypeSocket);
 
 var VueNumControl = {
   props: ['readonly', 'emitter', 'ikey', 'getData', 'putData'],
@@ -11,6 +17,30 @@ var VueNumControl = {
   methods: {
     change(e){
       this.value = +e.target.value;
+      this.update();
+    },
+    update() {
+      if (this.ikey)
+        this.putData(this.ikey, this.value)
+      this.emitter.trigger('process');
+    }
+  },
+  mounted() {
+    this.value = this.getData(this.ikey);
+  }
+}
+
+var VueUrlControl = {
+  props: ['readonly', 'emitter', 'ikey', 'getData', 'putData'],
+  template: '<input type="text" :readonly="readonly" :value="value" @input="change($event)" @dblclick.stop="" @pointerdown.stop="" @pointermove.stop=""/>',
+  data() {
+    return {
+      value: 0,
+    }
+  },
+  methods: {
+    change(e){
+      this.value = e.target.value;
       this.update();
     },
     update() {
@@ -37,6 +67,18 @@ class NumControl extends Rete.Control {
   }
 }
 
+class UrlControl extends Rete.Control {
+
+  constructor(emitter, key, readonly) {
+    super(key);
+    this.component = VueUrlControl;
+    this.props = { emitter, ikey: key, readonly };
+  }
+
+  setValue(val) {
+    this.vueContext.value = val;
+  }
+}
 class NumComponent extends Rete.Component {
 
     constructor(){
@@ -54,6 +96,29 @@ class NumComponent extends Rete.Component {
     }
 }
 
+class FetchComponent extends Rete.Component {
+
+    constructor(){
+        super("fetch");
+    }
+
+    builder(node) {
+        var out1 = new Rete.Output('json', "JSON", jsonSocket);
+
+        return node.addControl(new UrlControl(this.editor, 'json')).addOutput(out1);
+    }
+
+    async worker(node, inputs, outputs) {
+      if(node.data.json) {
+        
+  const response = await fetch(`https://api.github.com/users/${node.data.json}`);
+  const data = await response.json();
+      outputs['json'] = { data };
+      } else {
+        outputs['json'] = { data: {}}
+      }
+    }
+}
 class AddComponent extends Rete.Component {
     constructor(){
         super("Add");
@@ -114,9 +179,31 @@ class MultiplyComponent extends Rete.Component {
     }
 }
 
+class ConsoleLogComponent extends Rete.Component {
+  constructor() {
+    super("console.log")
+  }
+
+  builder(node) {
+    const inp1 = new Rete.Input('str', "String", anyTypeSocket)
+
+    return node
+      .addInput(inp1)
+    
+  }
+
+  worker(node, inputs, outputs) {
+
+    const str = inputs['str'].length ? inputs['str'][0] : node.data.str;
+    console.log(str)
+    
+  }
+}
+
+
 (async () => {
     var container = document.querySelector('#rete');
-  var components = [new NumComponent(), new AddComponent(), new MultiplyComponent()];
+  var components = [new NumComponent(), new AddComponent(), new MultiplyComponent(), new ConsoleLogComponent(), new FetchComponent()];
     
     var editor = new Rete.NodeEditor('demo@0.1.0', container);
     editor.use(ConnectionPlugin.default);
@@ -147,11 +234,10 @@ class MultiplyComponent extends Rete.Component {
 
     editor.connect(n1.outputs.get('num'), add.inputs.get('num'));
     editor.connect(n2.outputs.get('num'), add.inputs.get('num2'));
-
     */
 
+
     editor.on('process nodecreated noderemoved connectioncreated connectionremoved', async () => {
-      console.log('process');
         await engine.abort();
         await engine.process(editor.toJSON());
     });
@@ -159,4 +245,6 @@ class MultiplyComponent extends Rete.Component {
     editor.view.resize();
     AreaPlugin.zoomAt(editor);
     editor.trigger('process');
+
+
 })();
